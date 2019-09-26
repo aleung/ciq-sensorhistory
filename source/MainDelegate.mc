@@ -3,12 +3,29 @@ using Toybox.System;
 
 class MainDelegate extends WatchUi.BehaviorDelegate {
 
-    function initialize() {
+    var view;
+    var viewTypes = [:getTemperatureHistory, :getElevationHistory, :getPressureHistory, :getHeartRateHistory];
+    var viewTypeIdx = 0;
+
+    function initialize(refView) {
         BehaviorDelegate.initialize();
+        view = refView;
+        setNextViewType();
     }
 
     function onSelect() {
-        return false;
+        setNextViewType();
+        WatchUi.switchToView(view, self, WatchUi.SLIDE_UP);
+        return true;
+    }
+
+    private function setNextViewType() {
+        System.println("set view type to " + viewTypes[viewTypeIdx].toString());
+        view.setType(viewTypes[viewTypeIdx]);
+        viewTypeIdx++;
+        if (viewTypeIdx >= viewTypes.size()) {
+            viewTypeIdx = 0;
+        }
     }
 
 }

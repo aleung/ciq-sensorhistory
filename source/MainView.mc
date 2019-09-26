@@ -7,8 +7,14 @@ using Toybox.SensorHistory;
 
 class MainView extends WatchUi.View {
 
+    var viewType;
+
     function initialize() {
         View.initialize();
+    }
+
+    function setType(type) {
+        viewType = type;
     }
 
     // Load your resources here
@@ -36,7 +42,8 @@ class MainView extends WatchUi.View {
     }
 
     private function draw(dc) {
-        drawGraph(dc, 20, 180, 200, 120, getTemperatureHistory());
+        var iterator = getHistory(viewType);
+        drawGraph(dc, 30, 180, 180, 120, iterator);
     }
 
     // [baseX, baseY] : left bottom point
@@ -44,10 +51,19 @@ class MainView extends WatchUi.View {
         var ySpace = 15;
         var min = iterator.getMin();
         var max = iterator.getMax();
-        var yRatio = (height - ySpace*2) / (max - min);
-
         System.println("max=" + max + ", min=" + min);
-        System.println("yRatio="+yRatio);
+        if (max == min) {
+            if (min < 0) {
+                max = 0;
+            } else if (max > 0) {
+                min = 0;
+            } else {
+                max = 1;
+                min = 0;
+            }
+        }
+        var yRatio = (height - ySpace*2.0) / (max - min);
+        System.println("yRatio=" + yRatio);
 
         var fromTime = iterator.getOldestSampleTime().value();
         var toTime = iterator.getNewestSampleTime().value();
@@ -60,7 +76,8 @@ class MainView extends WatchUi.View {
         var sample = iterator.next();
         // TODO: move it outside of this function
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-        dc.drawText(120, 20, Graphics.FONT_MEDIUM, Lang.format("$1$", [sample.data]), Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(120, 20, Graphics.FONT_MEDIUM, 
+            Lang.format("$1$", [sample.data ? sample.data.format("%.1f") : "--"]), Graphics.TEXT_JUSTIFY_CENTER);
 
         var lastTime = Gregorian.info(iterator.getNewestSampleTime(), Time.FORMAT_SHORT);
         var hour = lastTime.hour;
@@ -75,18 +92,19 @@ class MainView extends WatchUi.View {
             x = x - 3600 / secPerPixel;
             hour = hour - 1;
             if (hour < 0) {
-                hour = 24;
+                hour = 23;
             }
         }
 
-        var stepSec = secPerPixel * 5; // x step: 5 pixels
+        var stepSec = secPerPixel * 3; // adjustable
         var nextTime = toTime - stepSec;
         var prevX = baseX + width - 1;
         var prevY = null;
         for (; sample != null; sample = iterator.next() ) {
+            var data = sample.data ? sample.data : min;
 
             if (prevY == null) {
-                prevY = baseY - ySpace - (sample.data - min) * yRatio;
+                prevY = baseY - ySpace - (data - min) * yRatio;
             }
 
             var t = sample.when.value();
@@ -95,9 +113,7 @@ class MainView extends WatchUi.View {
             }
 
             var x = baseX + width - 1 - Math.round((toTime - t) / secPerPixel);
-            // System.println("x="+x);
-
-            var y = baseY - ySpace - (sample.data - min) * yRatio;
+            var y = baseY - ySpace - (data - min) * yRatio;
             
             dc.setColor(Graphics.COLOR_DK_GRAY, Graphics.COLOR_BLACK);
             dc.fillPolygon([[x, y], [prevX, prevY], [prevX, baseY], [x, baseY]]);
@@ -114,9 +130,18 @@ class MainView extends WatchUi.View {
         dc.drawLine(baseX+width, baseY, baseX+width, baseY-height);
     }
 
-    private function getTemperatureHistory() {
-        if ((Toybox has :SensorHistory) && (Toybox.SensorHistory has :getTemperatureHistory)) {
-            return Toybox.SensorHistory.getTemperatureHistory({});
+    private function getHistory(type) {
+        if (Toybox has :SensorHistory && Toybox.SensorHistory has type) {
+            switch (type) {
+                case :getTemperatureHistory:
+                    return Toybox.SensorHistory.getTemperatureHistory({});
+                case :getPressureHistory:
+                    return Toybox.SensorHistory.getPressureHistory({});
+                case :getElevationHistory:
+                    return Toybox.SensorHistory.getElevationHistory({});
+                case :getHeartRateHistory:
+                    return Toybox.SensorHistory.getHeartRateHistory({});
+            }
         }        
         return null;
     }

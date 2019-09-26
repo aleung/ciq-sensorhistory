@@ -17,7 +17,8 @@ class App extends Application.AppBase {
 
     // Return the initial view of your application here
     function getInitialView() {
-    	var initialView = new MainView();
-        return [ initialView, new MainDelegate() ];
+    	var view = new MainView();
+        var delegate = new MainDelegate(view);
+        return [ view, delegate ];
     }
 }
