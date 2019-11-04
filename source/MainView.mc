@@ -7,19 +7,23 @@ using Toybox.SensorHistory;
 
 class MainView extends WatchUi.View {
 
-    var viewType;
+    private var viewType;
+    private var viewName;
+    private var screenMidX;
 
     function initialize() {
         View.initialize();
     }
 
-    function setType(type) {
+    function setType(type, name) {
         viewType = type;
+        viewName = name;
     }
 
     // Load your resources here
     function onLayout(dc) {
-        setLayout(Rez.Layouts.MainLayout(dc));      
+        setLayout(Rez.Layouts.MainLayout(dc));
+        screenMidX = dc.getWidth() / 2;
     }
 
     // Called when this View is brought to the foreground. Restore
@@ -43,7 +47,7 @@ class MainView extends WatchUi.View {
 
     private function draw(dc) {
         var iterator = getHistory(viewType);
-        drawGraph(dc, 30, 180, 180, 120, iterator);
+        drawGraph(dc, 20, 175, 200, 115, iterator);
     }
 
     // [baseX, baseY] : left bottom point
@@ -74,10 +78,10 @@ class MainView extends WatchUi.View {
         System.println("secPerPixel="+secPerPixel);
 
         var sample = iterator.next();
-        // TODO: move it outside of this function
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-        dc.drawText(120, 20, Graphics.FONT_MEDIUM, 
-            Lang.format("$1$", [sample.data ? sample.data.format("%.1f") : "--"]), Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(screenMidX - 30, 30, Graphics.FONT_XTINY, viewName + ":", Graphics.TEXT_JUSTIFY_RIGHT);
+        dc.drawText(screenMidX - 20, 20, Graphics.FONT_MEDIUM, 
+            Lang.format("$1$", [sample.data ? sample.data.format("%.1f") : "--"]), Graphics.TEXT_JUSTIFY_LEFT);
 
         var lastTime = Gregorian.info(iterator.getNewestSampleTime(), Time.FORMAT_SHORT);
         var hour = lastTime.hour;
@@ -100,21 +104,38 @@ class MainView extends WatchUi.View {
         var nextTime = toTime - stepSec;
         var prevX = baseX + width - 1;
         var prevY = null;
+        var minPoint = { :value => max };
+        var maxPoint = { :value => min };
+        var sum = 0;
+        var num = 0;
+
         for (; sample != null; sample = iterator.next() ) {
             var data = sample.data ? sample.data : min;
+            // System.println(data);
 
             if (prevY == null) {
                 prevY = baseY - ySpace - (data - min) * yRatio;
             }
 
             var t = sample.when.value();
+            var x = baseX + width - 1 - Math.round((toTime - t) / secPerPixel);
+            var y = baseY - ySpace - (data - min) * yRatio;
+            
+            if (sample.data != null) {
+                sum += data;
+                num++;
+                if (data < minPoint[:value]) {
+                    minPoint = { :x => x, :y => y, :value => data };
+                } 
+                if (data > maxPoint[:value]) {
+                    maxPoint = { :x => x, :y => y, :value => data };
+                } 
+            }
+
             if (t > nextTime) {
                 continue;
             }
 
-            var x = baseX + width - 1 - Math.round((toTime - t) / secPerPixel);
-            var y = baseY - ySpace - (data - min) * yRatio;
-            
             dc.setColor(Graphics.COLOR_DK_GRAY, Graphics.COLOR_BLACK);
             dc.fillPolygon([[x, y], [prevX, prevY], [prevX, baseY], [x, baseY]]);
             dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
@@ -125,9 +146,36 @@ class MainView extends WatchUi.View {
             nextTime = nextTime - stepSec;
         }
 
+        var avg = sum/num;
+        System.println("avg=" + avg);
+        var avgY = baseY - ySpace - (avg - min) * yRatio; 
+        dc.setColor(Graphics.COLOR_YELLOW, Graphics.COLOR_TRANSPARENT);
+        dc.drawLine(baseX, avgY, baseX + width, avgY);
+        dc.drawText(screenMidX, baseY + dc.getFontHeight(Graphics.FONT_XTINY), Graphics.FONT_XTINY, "avg: " + avg.format("%.1f"), 
+                Graphics.TEXT_JUSTIFY_CENTER);
+
+        drawMarker(dc, minPoint, -1);
+        drawMarker(dc, maxPoint, 1);
+
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         dc.drawLine(baseX, baseY, baseX, baseY-height);
         dc.drawLine(baseX+width, baseY, baseX+width, baseY-height);
+    }
+
+    private function drawMarker(dc, point, sign) {
+        var x = point[:x];
+        var y = point[:y];
+        dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_TRANSPARENT);
+        dc.fillPolygon([[x, y-sign], [x+4, y-8*sign], [x-4, y-8*sign]]);
+        dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_YELLOW);
+        var text = " " + point[:value].format("%.1f") + " ";
+        if (x > screenMidX) {
+            dc.drawText(x-10, y-8*sign, Graphics.FONT_XTINY, text, 
+                Graphics.TEXT_JUSTIFY_RIGHT | Graphics.TEXT_JUSTIFY_VCENTER);
+        } else {
+            dc.drawText(x+10, y-8*sign, Graphics.FONT_XTINY, text, 
+                Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+        }
     }
 
     private function getHistory(type) {

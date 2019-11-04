@@ -5,6 +5,7 @@ class MainDelegate extends WatchUi.BehaviorDelegate {
 
     var view;
     var viewTypes = [:getTemperatureHistory, :getElevationHistory, :getPressureHistory, :getHeartRateHistory];
+    var typeNames = ["Temp", "Elev", "Pres", "HR"];
     var viewTypeIdx = 0;
 
     function initialize(refView) {
@@ -21,7 +22,7 @@ class MainDelegate extends WatchUi.BehaviorDelegate {
 
     private function setNextViewType() {
         System.println("set view type to " + viewTypes[viewTypeIdx].toString());
-        view.setType(viewTypes[viewTypeIdx]);
+        view.setType(viewTypes[viewTypeIdx], typeNames[viewTypeIdx]);
         viewTypeIdx++;
         if (viewTypeIdx >= viewTypes.size()) {
             viewTypeIdx = 0;
