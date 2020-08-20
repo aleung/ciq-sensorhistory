@@ -79,9 +79,9 @@ class MainView extends WatchUi.View {
 
         var sample = iterator.next();
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-        dc.drawText(screenMidX - 30, 30, Graphics.FONT_XTINY, viewName + ":", Graphics.TEXT_JUSTIFY_RIGHT);
-        dc.drawText(screenMidX - 20, 20, Graphics.FONT_MEDIUM, 
-            Lang.format("$1$", [sample.data ? sample.data.format("%.1f") : "--"]), Graphics.TEXT_JUSTIFY_LEFT);
+        dc.drawText(screenMidX, 2, Graphics.FONT_XTINY, viewName, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(screenMidX, 20, Graphics.FONT_MEDIUM, 
+            Lang.format("$1$", [sample.data ? sample.data.format("%.1f") : "--"]), Graphics.TEXT_JUSTIFY_CENTER);
 
         var lastTime = Gregorian.info(iterator.getNewestSampleTime(), Time.FORMAT_SHORT);
         var hour = lastTime.hour;

@@ -1,3 +1,7 @@
 <strings>
     <string id="AppName">Sensor History</string>
+    <string id="Temperature">Temperature</string>
+    <string id="Elevation">Elevation</string>
+    <string id="Pressure">Pressure</string>
+    <string id="HeartRate">HR</string>
 </strings>
